@@ -10,9 +10,8 @@ import UIKit
 
 class MasterViewController: UITableViewController {
 
-    var detailViewController: DetailViewController? = nil
+    var detailViewController: DetailViewController?
     var objects = [Any]()
-
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -23,7 +22,10 @@ class MasterViewController: UITableViewController {
         navigationItem.rightBarButtonItem = addButton
         if let split = splitViewController {
             let controllers = split.viewControllers
-            detailViewController = (controllers[controllers.count-1] as! UINavigationController).topViewController as? DetailViewController
+            guard let navigationController = controllers.last as? UINavigationController else {
+                return
+            }
+            detailViewController = navigationController.topViewController as? DetailViewController
         }
     }
 
@@ -49,8 +51,15 @@ class MasterViewController: UITableViewController {
     override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
         if segue.identifier == "showDetail" {
             if let indexPath = tableView.indexPathForSelectedRow {
-                let object = objects[indexPath.row] as! NSDate
-                let controller = (segue.destination as! UINavigationController).topViewController as! DetailViewController
+                guard let object = objects[indexPath.row] as? NSDate else {
+                    return
+                }
+                guard let navigationController = segue.destination as? UINavigationController else {
+                    return
+                }
+                guard let controller = navigationController.topViewController as? DetailViewController else {
+                    return
+                }
                 controller.detailItem = object
                 controller.navigationItem.leftBarButtonItem = splitViewController?.displayModeButtonItem
                 controller.navigationItem.leftItemsSupplementBackButton = true
@@ -71,7 +80,9 @@ class MasterViewController: UITableViewController {
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
 
-        let object = objects[indexPath.row] as! NSDate
+        guard let object = objects[indexPath.row] as? NSDate else {
+            return cell
+        }
         cell.textLabel!.text = object.description
         return cell
     }
@@ -81,15 +92,16 @@ class MasterViewController: UITableViewController {
         return true
     }
 
-    override func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCellEditingStyle, forRowAt indexPath: IndexPath) {
+    override func tableView(_ tableView: UITableView,
+                            commit editingStyle: UITableViewCellEditingStyle,
+                            forRowAt indexPath: IndexPath) {
         if editingStyle == .delete {
             objects.remove(at: indexPath.row)
             tableView.deleteRows(at: [indexPath], with: .fade)
         } else if editingStyle == .insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view.
+            // Create a new instance of the appropriate class, insert it into the array,
+            // and add a new row to the table view.
         }
     }
 
-
 }
-
