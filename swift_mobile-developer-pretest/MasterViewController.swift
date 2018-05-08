@@ -23,6 +23,8 @@ class MasterViewController: UITableViewController {
             }
             detailViewController = navigationController.topViewController as? DetailViewController
         }
+
+        getDramaData()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -83,21 +85,65 @@ class MasterViewController: UITableViewController {
         return cell
     }
 
-    override func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
+    // MARK: - Private Method
+    func getDramaData() {
+        if let urlComponents = URLComponents(string: "http://www.mocky.io/v2/5a97c59c30000047005c1ed2") {
 
-    override func tableView(_ tableView: UITableView,
-                            commit editingStyle: UITableViewCellEditingStyle,
-                            forRowAt indexPath: IndexPath) {
-        if editingStyle == .delete {
-            objects.remove(at: indexPath.row)
-            tableView.deleteRows(at: [indexPath], with: .fade)
-        } else if editingStyle == .insert {
-            // Create a new instance of the appropriate class, insert it into the array,
-            // and add a new row to the table view.
+            guard let url = urlComponents.url else { return }
+
+            let defaultSession = URLSession(configuration: .default)
+            let dataTask = defaultSession.dataTask(with: url) { (data, urlResponse, error) in
+                if let error = error {
+                    print("Get an error: \(error)")
+                } else if let jsonData = data, let response = urlResponse {
+                    let jsonDecoder = JSONDecoder()
+                    jsonDecoder.dateDecodingStrategy = .formatted(DateFormatter.iso8601Full)
+
+                    if let jsonString = String(bytes: jsonData, encoding: .utf8) {
+                        print("Get data: \(jsonString), response: \(response)")
+                    }
+
+                    if let dramaData = try? jsonDecoder.decode(DramaData.self, from: jsonData) {
+                        print("Get drama data: \(dramaData)")
+                    }
+                }
+            }
+
+            dataTask.resume()
         }
     }
 
+}
+
+struct DramaData: Codable {
+    var data: [Drama]
+}
+
+struct Drama: Codable {
+    var dramaId: Int
+    var name: String
+    var totalViews: Int
+    var createdAt: Date
+    var thumb: String
+    var rating: Float
+
+    enum CodingKeys: String, CodingKey {
+        case dramaId = "drama_id"
+        case name
+        case totalViews = "total_views"
+        case createdAt = "created_at"
+        case thumb
+        case rating
+    }
+}
+
+extension DateFormatter {
+    static let iso8601Full: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSSZZZZZ"
+        formatter.calendar = Calendar(identifier: .iso8601)
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        return formatter
+    }()
 }
